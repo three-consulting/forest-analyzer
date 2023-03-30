@@ -1,0 +1,15 @@
+[tool.poetry]
+name = "forest-analyzer"
+version = "0.1.0"
+description = "Textual forest data analyzer"
+authors = ["ronikeuru <roni@three.consulting>"]
+readme = "README.md"
+packages = [{include = "forest_analyzer"}]
+
+[tool.poetry.dependencies]
+python = "^3.10"
+
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
