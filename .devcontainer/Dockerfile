@@ -23,7 +23,9 @@ RUN DEBIAN_FRONTEND=noninteractive \
         libxml2-dev \
         libxmlsec1-dev \
         libffi-dev \
-        liblzma-dev
+        liblzma-dev \
+        sqlite3 \
+        libsqlite3-mod-spatialite
 
 # Python and poetry installation
 USER $USER
@@ -33,6 +35,7 @@ ARG PYTHON_VERSION=3.10
 
 ENV PYENV_ROOT="${HOME}/.pyenv"
 ENV PATH="${PYENV_ROOT}/shims:${PYENV_ROOT}/bin:${HOME}/.local/bin:$PATH"
+ENV PYTHON_CONFIGURE_OPTS="--enable-loadable-sqlite-extensions=yes"
 
 RUN echo "done 0" \
     && curl https://pyenv.run | bash \
