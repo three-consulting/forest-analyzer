@@ -25,7 +25,9 @@ RUN DEBIAN_FRONTEND=noninteractive \
         libffi-dev \
         liblzma-dev \
         sqlite3 \
-        libsqlite3-mod-spatialite
+        libsqlite3-mod-spatialite \
+        gdal-bin \
+        libgdal-dev
 
 # Python and poetry installation
 USER $USER
