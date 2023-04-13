@@ -2,12 +2,13 @@ import os
 from dotenv import load_dotenv
 import streamlit as st
 import json
+from geoalchemy2 import Geometry
 import folium
 from streamlit_folium import st_folium
 from sqlalchemy import create_engine
 from llama_index import GPTSQLStructStoreIndex, SQLDatabase
 from llama_index.indices.struct_store import SQLContextContainerBuilder
-from langchain import OpenAI
+from langchain.chat_models import ChatOpenAI
 
 ##################################################################
 
@@ -20,7 +21,7 @@ DATABASE_PASSWORD = os.getenv("DATABASE_PASSWORD")
 DATABASE_PORT = os.getenv("DATABASE_PORT")
 DATABASE_HOST = os.getenv("DATABASE_HOST")
 
-llm_predictor = OpenAI(model_name="gpt-4")
+llm_predictor = ChatOpenAI(model_name="gpt-4")
 
 connection_string = f"postgresql://{DATABASE_USER}:{DATABASE_PASSWORD}@{DATABASE_HOST}:{DATABASE_PORT}/{DATABASE_NAME}"
 engine = create_engine(connection_string)
@@ -73,19 +74,21 @@ def app():
                 st.info("Creating a SQL query from given prompt..")
                 st.session_state.response = index.query(st.session_state.prompt)
                 
-                st.session_state.sql_query = st.session_state.extra_info['sql_query']
+                st.session_state.sql_query = st.session_state.response.extra_info['sql_query']
                 
                 st.subheader("SQL Query:")
                 st.code(st.session_state.sql_query, language="sql", line_numbers=False)
-            except Exception as _:
+            except Exception as error:
                 st.error("Could not make a SQL query from given prompt. Why not try some other prompt?")
+                st.error(error)
                 st.stop()
             
             try:
                 st.info("Processing query data..")
                 st.session_state.geojson = json.loads(st.session_state.response.extra_info["result"][0][0])
-            except Exception as _:
+            except Exception as error:
                 st.error("Could not process data into suitable format. Why not try some other prompt?")
+                st.error(error)
                 st.stop()
 
             try:
@@ -98,8 +101,9 @@ def app():
 
                 st.subheader("Map:")
                 st_folium(st.session_state.folium_map)
-            except Exception as _:
+            except Exception as error:
                 st.error("Could not create a map for query data. Why not try some other prompt?")
+                st.error(error)
                 st.stop()
 
 if __name__ == "__main__":
