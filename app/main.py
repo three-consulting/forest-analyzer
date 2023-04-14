@@ -75,7 +75,7 @@ def app():
 
         st.text_input("Get the forest polygon with largest area?", key="prompt")
 
-        if len(st.session_state.prompt) > 0:
+        if len(st.session_state.prompt) > 5:
             try:
                 st.info("Creating a SQL query from given prompt..")
                 st.session_state.response = index.query(st.session_state.prompt)
@@ -111,6 +111,8 @@ def app():
                 st.error("Could not create a map for query data. Why not try some other prompt?")
                 st.error(error)
                 st.stop()
+        elif len(st.session_state.prompt) <= 5:
+            st.error("The given prompt is too short")
 
 if __name__ == "__main__":
     app()
