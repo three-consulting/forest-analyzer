@@ -3,12 +3,12 @@ from dotenv import load_dotenv
 import streamlit as st
 import json
 from geoalchemy2 import Geometry
-import folium
-from streamlit_folium import st_folium
+import pydeck as pdk
 from sqlalchemy import create_engine
 from llama_index import GPTSQLStructStoreIndex, SQLDatabase
 from llama_index.indices.struct_store import SQLContextContainerBuilder
 from langchain.chat_models import ChatOpenAI
+import pydeck as pdk
 
 ##################################################################
 
@@ -18,22 +18,146 @@ from langchain.chat_models import ChatOpenAI
     #               #
     #################
 
-load_dotenv()
+with st.spinner('Wait for it...'):
+    load_dotenv()
 
-OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
-DATABASE_NAME = os.getenv("DATABASE_NAME")
-DATABASE_USER = os.getenv("DATABASE_USER")
-DATABASE_PASSWORD = os.getenv("DATABASE_PASSWORD")
-DATABASE_PORT = os.getenv("DATABASE_PORT")
-DATABASE_HOST = os.getenv("DATABASE_HOST")
+    OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
+    DATABASE_NAME = os.getenv("DATABASE_NAME")
+    DATABASE_USER = os.getenv("DATABASE_USER")
+    DATABASE_PASSWORD = os.getenv("DATABASE_PASSWORD")
+    DATABASE_PORT = os.getenv("DATABASE_PORT")
+    DATABASE_HOST = os.getenv("DATABASE_HOST")
 
-llm_predictor = ChatOpenAI(model_name="gpt-4")
+    llm_predictor = ChatOpenAI(model_name="gpt-4")
 
-connection_string = f"postgresql://{DATABASE_USER}:{DATABASE_PASSWORD}@{DATABASE_HOST}:{DATABASE_PORT}/{DATABASE_NAME}"
-engine = create_engine(connection_string)
+    connection_string = f"postgresql://{DATABASE_USER}:{DATABASE_PASSWORD}@{DATABASE_HOST}:{DATABASE_PORT}/{DATABASE_NAME}"
+    engine = create_engine(connection_string)
 
-db = SQLDatabase(engine, include_tables=["stand_4326"])
-st.session_state.folium_map = folium.Map()
+    db = SQLDatabase(engine, include_tables=["stand_4326"])
+
+        ####################
+        #                  #
+        #   Tab 3 Index    #
+        #                  #
+        ####################
+
+    stand_4326_text_tab3 = (
+        "The PostGis plugin is available in the database.\n"
+        "The forest polygons can be found from the geometry column.\n"
+        "Get the query as geojson."
+    )
+
+    table_context_dict_tab3 = {
+        "stand_4326": stand_4326_text_tab3,
+    }
+    context_builder_tab3 = SQLContextContainerBuilder(db, context_dict=table_context_dict_tab3)
+    context_container_tab3 = context_builder_tab3.build_context_container()
+    index_tab3 = GPTSQLStructStoreIndex.from_documents(
+        [],
+        sql_database=db,
+        table_name="stand_4326",
+        sql_context_container=context_container_tab3,
+    )
+
+        ####################
+        #                  #
+        #   Tab 4 Index    #
+        #                  #
+        ####################
+
+    stand_4326_text_tab4 = (
+        "I have postgreSQL database with PostGis geospatial forest data.\n"
+        "The PostGis plugin is available in the database.\n"
+        "The forest polygons can be found from the geometry column.\n"
+        "Use ST_DistanceSphere function and divide with 1000 when calculating the distance.\n"
+    )
+
+    table_context_dict_tab4 = {
+        "stand_4326": stand_4326_text_tab4,
+    }
+    context_builder_tab4 = SQLContextContainerBuilder(db, context_dict=table_context_dict_tab4)
+    context_container_tab4 = context_builder_tab4.build_context_container()
+    index_tab4 = GPTSQLStructStoreIndex.from_documents(
+        [],
+        sql_database=db,
+        table_name="stand_4326",
+        sql_context_container=context_container_tab4,
+    )
+
+        #################
+        #               #
+        #   Tab 4 Map   #
+        #               #
+        #################
+
+    try:            
+        geojson_res = db.run_sql(
+            """
+                SELECT ST_AsGeoJSON(s1.geometry) AS g1, ST_AsGeoJSON(s2.geometry) AS g2
+                FROM stand_4326 s1, stand_4326 s2
+                WHERE s1.id = 228942 AND s2.id = 298208  
+                LIMIT 1;
+            """
+        )
+
+        initial_view_state = pdk.ViewState(
+            latitude=60.7,
+            longitude=21.9,
+            zoom=9.5
+        )
+
+        result_1 = json.loads(geojson_res[1]["result"][0][0])
+        result_2 = json.loads(geojson_res[1]["result"][0][1])
+
+        point_1 = result_1['coordinates'][0][0][36]
+        point_2 = result_2['coordinates'][0][0][67]
+
+        distance_line = [{"start": point_1, "end": point_2}]
+
+        geojson_layer_1 = pdk.Layer(
+            "GeoJsonLayer",
+            result_1,
+            opacity=0.6,
+            filled=True,
+            get_fill_color="[255, 125, 0]",
+            get_line_color="[255, 125, 0]",
+            highlight_color=[255, 255, 0],
+            auto_highlight=True,
+            picking_radius=10,
+            pickable=True,
+        )
+
+        geojson_layer_2 = pdk.Layer(
+            "GeoJsonLayer",
+            result_2,
+            opacity=0.6,
+            filled=True,
+            get_fill_color="[255, 125, 0]",
+            get_line_color="[255, 125, 0]",
+            highlight_color=[255, 255, 0],
+            auto_highlight=True,
+            picking_radius=10,
+            pickable=True,
+        )
+
+        line_layer = pdk.Layer(
+            "LineLayer",
+            distance_line,
+            get_color="[255, 125, 0]",
+            highlight_color=[255, 255, 0],
+            get_source_position="start",
+            get_target_position="end",
+            get_width=3,
+            auto_highlight=True,
+            picking_radius=10,
+            pickable=True,
+        )
+
+        st.session_state.tab4_layers = [geojson_layer_1, geojson_layer_2, line_layer]
+    except Exception as error:
+            st.error("Could not create a map for tab 4.")
+            st.error(error)
+            st.stop()
 
 ####################################################################
 
@@ -78,29 +202,7 @@ def all_tab():
     #   Tab 3    #
     #            #
     ##############
-
 def area_tab():
-    # Context
-    stand_4326_text = (
-        "The PostGis plugin is available in the database.\n"
-        "The forest polygons can be found from the geometry column.\n"
-        "Get the query as geojson."
-    )
-
-    table_context_dict = {
-        "stand_4326": stand_4326_text,
-    }
-    context_builder = SQLContextContainerBuilder(db, context_dict=table_context_dict)
-    context_container = context_builder.build_context_container()
-
-    index = GPTSQLStructStoreIndex.from_documents(
-        [],
-        sql_database=db,
-        table_name="stand_4326",
-        sql_context_container=context_container,
-    )
-
-    # Content
     st.header("Largest Area")
 
     st.text_input("Get the forest polygon with largest area?", key="prompt")
@@ -108,7 +210,7 @@ def area_tab():
     if len(st.session_state.prompt) > 0:
         try:
             st.info("Creating a SQL query from given prompt..")
-            st.session_state.response = index.query(st.session_state.prompt)
+            st.session_state.response = index_tab3.query(st.session_state.prompt)
             
             st.session_state.sql_query = st.session_state.response.extra_info['sql_query']
             
@@ -122,6 +224,9 @@ def area_tab():
         try:
             st.info("Processing query data..")
             st.session_state.geojson = json.loads(st.session_state.response.extra_info["result"][0][0])
+
+            st.subheader("GeoJson:")
+            st.json(st.session_state.geojson, expanded=False)
         except Exception as error:
             st.error("Could not process data into suitable format. Why not try some other prompt?")
             st.error(error)
@@ -131,16 +236,34 @@ def area_tab():
             st.info("Creating a map for query data..")
             
             coordinates = st.session_state.geojson["coordinates"][0][0][0]
-            
             lat, lon = round(coordinates[1], 2), round(coordinates[0], 2)            
-            loc = [lat, lon]
+            initial_view_state = pdk.ViewState(
+                latitude = lat,
+                longitude=lon,
+                zoom=10
+            )
+
+            geojson_layer = pdk.Layer(
+                "GeoJsonLayer",
+                st.session_state.geojson,
+                opacity=0.6,
+                filled=True,
+                get_fill_color="[255, 125, 0]",
+                get_line_color="[255, 125, 0]",
+                highlight_color=[255, 255, 0],
+                auto_highlight=True,
+                picking_radius=10,
+                pickable=True,
+            )
             
-            st.session_state.folium_map = folium.Map(location=loc, zoom_start=12)
-
-            folium.GeoJson(st.session_state.geojson).add_to(st.session_state.folium_map)
-
             st.subheader("Map:")
-            st_folium(st.session_state.folium_map)
+            st.pydeck_chart(
+                pdk.Deck(
+                    map_style="dark",
+                    initial_view_state=initial_view_state,
+                    layers=[geojson_layer]
+                )
+            )
         except Exception as error:
             st.error("Could not create a map for query data. Why not try some other prompt?")
             st.error(error)
@@ -155,59 +278,22 @@ def area_tab():
     ##############
 
 def distance_tab():
-    # Context
-    stand_4326_text = (
-        "I have postgreSQL database with PostGis geospatial forest data.\n"
-        "The PostGis plugin is available in the database.\n"
-        "The forest polygons can be found from the geometry column.\n"
-        "Use ST_DistanceSphere function and divide with 1000 when calculating the distance.\n"
-    )
-
-    table_context_dict = {
-        "stand_4326": stand_4326_text,
-    }
-    context_builder = SQLContextContainerBuilder(db, context_dict=table_context_dict)
-    context_container = context_builder.build_context_container()
-
-    index = GPTSQLStructStoreIndex.from_documents(
-        [],
-        sql_database=db,
-        table_name="stand_4326",
-        sql_context_container=context_container,
-    )
-
-    # Content
     st.header("Distance between two forest areas")
-
-    try:            
-        geojson_res = db.run_sql(
-            """
-                SELECT ST_AsGeoJSON(s1.geometry) AS g1, ST_AsGeoJSON(s2.geometry) AS g2
-                FROM stand_4326 s1, stand_4326 s2
-                WHERE s1.id = 228942 AND s2.id = 69028  
-                LIMIT 1;
-            """
+    st.subheader("Map:")
+    st.pydeck_chart(
+        pdk.Deck(
+            map_style="dark",
+            initial_view_state=initial_view_state,
+            layers=st.session_state.tab4_layers,
         )
+    )
 
-        loc = [60.2, 22.3]
-        st.session_state.folium_map = folium.Map(location=loc, zoom_start=9)
-        
-        folium.GeoJson(json.loads(geojson_res[1]["result"][0][0])).add_to(st.session_state.folium_map)
-        folium.GeoJson(json.loads(geojson_res[1]["result"][0][1])).add_to(st.session_state.folium_map)
-
-        st.subheader("Map:")
-        st_folium(st.session_state.folium_map)
-    except Exception as error:
-        st.error("Could not create a map for task.")
-        st.error(error)
-        st.stop()
-
-    st.text_input("Query the distance between two forests in km by giving the ids 228942 and 69028 of forests", key="distance_prompt")
+    st.text_input("Query the distance between two forests in km by giving the ids 228942 and 298208 of forests", key="distance_prompt")
 
     if len(st.session_state.distance_prompt) > 0:
         try:
             st.info("Creating a SQL query from givern prompt..")
-            st.session_state.response = index.query(st.session_state.distance_prompt)
+            st.session_state.response = index_tab4.query(st.session_state.distance_prompt)
 
             st.session_state.sql_query = st.session_state.response.extra_info['sql_query']
 
@@ -215,6 +301,22 @@ def distance_tab():
             st.code(st.session_state.sql_query, language="sql", line_numbers=False)
         except Exception as error:
             st.error("Could not make a SQL query from given prompt. Why not try some other prompt?")
+            st.error(error)
+            st.stop()
+
+        try:
+            st.info("Processing query data..")
+            st.session_state.distance_result = round(st.session_state.response.extra_info["result"][0][0], 2)
+            gold_standard = 18.37
+
+            st.subheader("Query result:")
+            st.metric(
+                label="Query Result:",
+                value=f"{st.session_state.distance_result} km",
+                delta=f"{st.session_state.distance_result - gold_standard} km",
+            )
+        except Exception as error:
+            st.error("Could not process data into suitable format. Why not try some other prompt?")
             st.error(error)
             st.stop()
 
