@@ -25,6 +25,11 @@ plotly = "^5.14.1"
 streamlit = "^1.21.0"
 streamlit-folium = "^0.11.1"
 wikipedia = "^1.4.0"
+nbformat = "^5.8.0"
+chart-studio = "^1.1.0"
+shapely = "^2.0.1"
+geoplot = "^0.5.1"
+pydeck = {extras = ["jupyter"], version = "^0.8.0"}
 
 [tool.poetry.group.dev.dependencies]
 ipykernel = "^6.22.0"
