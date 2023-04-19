@@ -1,4 +1,5 @@
 import os
+import pandas as pd
 from dotenv import load_dotenv
 import streamlit as st
 import json
@@ -19,6 +20,8 @@ import pydeck as pdk
     #################
 
 with st.spinner('Wait for it...'):
+    st.session_state.points = [0, 0, 0, 0]
+
     load_dotenv()
 
     OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
@@ -33,7 +36,13 @@ with st.spinner('Wait for it...'):
     connection_string = f"postgresql://{DATABASE_USER}:{DATABASE_PASSWORD}@{DATABASE_HOST}:{DATABASE_PORT}/{DATABASE_NAME}"
     engine = create_engine(connection_string)
 
+    db_all = SQLDatabase(engine)
     db = SQLDatabase(engine, include_tables=["stand_4326"])
+
+    index_all = GPTSQLStructStoreIndex.from_documents(
+        [],
+        sql_database=db_all,
+    )
 
         ####################
         #                  #
@@ -82,6 +91,32 @@ with st.spinner('Wait for it...'):
         sql_database=db,
         table_name="stand_4326",
         sql_context_container=context_container_tab4,
+    )
+
+        ####################
+        #                  #
+        #   Tab 5 Index    #
+        #                  #
+        ####################
+
+    stand_4326_text_tab5 = (
+        "I have postgreSQL database with PostGis geospatial forest data.\n"
+        "The PostGis plugin is available in the database.\n"
+        "The forest polygons can be found from the geometry column.\n"
+        "Get the geometry as geojson.\n"
+        "Don't include NULL values.\n"
+    )
+
+    table_context_dict_tab5 = {
+        "stand_4326": stand_4326_text_tab5,
+    }
+    context_builder_tab5 = SQLContextContainerBuilder(db, context_dict=table_context_dict_tab5)
+    context_container_tab5 = context_builder_tab5.build_context_container()
+    index_tab5 = GPTSQLStructStoreIndex.from_documents(
+        [],
+        sql_database=db,
+        table_name="stand_4326",
+        sql_context_container=context_container_tab5,
     )
 
         #################
@@ -189,11 +224,56 @@ def intro_tab():
     #            #
     ##############
 
-def all_tab():
+def all_tab(points_bar):
     st.header("All tables")
     
-    st.text_input("How many tables is in the database?", key="table_prompt")
-    st.info(st.session_state.table_prompt)
+    # Get the names of all tables in database
+    st.text_input("Get the names of all tables in database", key="table_prompt")
+    
+    if len(st.session_state.table_prompt) > 0:
+        try:
+            st.info("Creating a SQL query from given prompt..")
+            
+            all_tables_response = index_all.query(st.session_state.table_prompt)
+            all_tables_query = all_tables_response.extra_info["sql_query"]
+
+            st.subheader("SQL Query:")
+            st.code(all_tables_query, language='sql', line_numbers=False)
+        except Exception as error:
+            st.error("Could not make a SQL query from given prompt. Why not try some other prompt?")
+            st.error(error)
+            st.stop()
+
+        try:
+            st.info("Processing query data..")
+
+            all_tables_result = all_tables_response.extra_info["result"]
+
+            if type(all_tables_result).__name__ == 'list':
+                all_tables_list = [m[0] for m in all_tables_result]
+
+                st.subheader("Tables:")
+                
+                df = pd.DataFrame(
+                    all_tables_list,
+                    columns=['Tables']
+                )
+                
+                st.table(df)
+
+                if True:
+                    st.session_state.points[0] = 1
+                    points_bar.progress(
+                        int(sum(st.session_state.points)/len(st.session_state.points)*100),
+                        text=f"{sum(st.session_state.points)}/{len(st.session_state.points)}"
+                    )
+                    st.success("You did it!")
+            else:
+                raise Exception("Result is not a list")
+        except Exception as error:
+            st.error("Could not process data into suitable format. Why not try some other prompt?")
+            st.error(error)
+            st.stop()
 
 ####################################################################
 
@@ -202,10 +282,11 @@ def all_tab():
     #   Tab 3    #
     #            #
     ##############
-def area_tab():
+def area_tab(points_bar):
     st.header("Largest Area")
 
-    st.text_input("Get the forest polygon with largest area?", key="prompt")
+    # Get the forest polygon with largest area
+    st.text_input("Get the forest polygon with largest area", key="prompt")
 
     if len(st.session_state.prompt) > 0:
         try:
@@ -264,6 +345,14 @@ def area_tab():
                     layers=[geojson_layer]
                 )
             )
+            
+            if True:
+                st.session_state.points[1] = 1
+                points_bar.progress(
+                    int(sum(st.session_state.points)/len(st.session_state.points)*100),
+                    text=f"{sum(st.session_state.points)}/{len(st.session_state.points)}"
+                )
+                st.success("You did it!")
         except Exception as error:
             st.error("Could not create a map for query data. Why not try some other prompt?")
             st.error(error)
@@ -277,7 +366,7 @@ def area_tab():
     #            #
     ##############
 
-def distance_tab():
+def distance_tab(points_bar):
     st.header("Distance between two forest areas")
     st.subheader("Map:")
     st.pydeck_chart(
@@ -288,6 +377,7 @@ def distance_tab():
         )
     )
 
+    # Query the distance between two forests in km by giving the ids 228942 and 298208 of forests
     st.text_input("Query the distance between two forests in km by giving the ids 228942 and 298208 of forests", key="distance_prompt")
 
     if len(st.session_state.distance_prompt) > 0:
@@ -315,9 +405,112 @@ def distance_tab():
                 value=f"{st.session_state.distance_result} km",
                 delta=f"{st.session_state.distance_result - gold_standard} km",
             )
+            
+            if st.session_state.distance_result - gold_standard == 0.0:
+                st.session_state.points[2] = 1
+                points_bar.progress(
+                    int(sum(st.session_state.points)/len(st.session_state.points)*100),
+                    text=f"{sum(st.session_state.points)}/{len(st.session_state.points)}"
+                )
+                st.success("You did it!")
         except Exception as error:
             st.error("Could not process data into suitable format. Why not try some other prompt?")
             st.error(error)
+            st.stop()
+
+####################################################################
+
+    ##############
+    #            #
+    #   Tab 5    #
+    #            #
+    ##############
+
+def tree_species_tab(points_bar):
+    st.header("Main tree species:")
+
+    tree_data = { "maintreespecies": [1, 2, 29], "nimi": ["Mänty", "Kuusi", "Lehtipuu"], "name": ["Pine", "Spruce", "Leafy tree"] }
+    tree_df = pd.DataFrame(data=tree_data)
+
+    st.info("Below is a table of maintreespecies found in database.")
+    st.dataframe(tree_df)
+
+    # Get the id and forest polygon of forest with larges area that has main tree species 2. Don't include NULL values.
+    st.text_input("Get the id and forest polygon of forest with largest area that has main tree species spruce", key="tree_prompt")
+
+    if len(st.session_state.tree_prompt) > 0:
+        try:
+            st.info("Creating a SQL query from givern prompt..")
+            st.session_state.tree_response = index_tab5.query(st.session_state.tree_prompt)
+
+            st.session_state.tree_sql_query = st.session_state.tree_response.extra_info['sql_query']
+
+            st.subheader("SQL Query:")
+            st.code(st.session_state.tree_sql_query, language="sql", line_numbers=False)
+        except Exception as e:
+            st.error(e)
+            st.stop()
+
+        try:
+            st.info("Processing query data..")
+            
+            st.session_state.tree_result = st.session_state.tree_response.extra_info["result"][0]
+            tree_id, tree_polygon = st.session_state.tree_result
+            tree_polygon_geojson = json.loads(tree_polygon)
+            
+            st.subheader("Query result:")
+            st.info(f"Id: {tree_id}")
+            st.json(tree_polygon_geojson, expanded=False)
+        except Exception as e:
+            st.error(e)
+            st.stop()
+
+        try:
+            st.info("Creating a map for query data..")
+            
+            coordinates = tree_polygon_geojson["coordinates"][0][0][0]
+            lat, lon = round(coordinates[1], 2), round(coordinates[0], 2)            
+            initial_view_state = pdk.ViewState(
+                latitude=lat,
+                longitude=lon,
+                zoom=10
+            )
+
+            tree_geojson_layer = pdk.Layer(
+                "GeoJsonLayer",
+                tree_polygon_geojson,
+                opacity=0.6,
+                filled=True,
+                get_fill_color="[255, 125, 0]",
+                get_line_color="[255, 125, 0]",
+                highlight_color=[255, 255, 0],
+                auto_highlight=True,
+                picking_radius=10,
+                pickable=True,
+            )
+            
+            st.subheader("Map:")
+            st.pydeck_chart(
+                pdk.Deck(
+                    map_style="dark",
+                    initial_view_state=initial_view_state,
+                    layers=[tree_geojson_layer]
+                )
+            )
+        except Exception as e:
+            st.error(e)
+            st.stop()
+
+        try:
+            if True:
+                st.session_state.points[3] = 1
+                points_bar.progress(
+                    int(sum(st.session_state.points)/len(st.session_state.points)*100),
+                    text=f"{sum(st.session_state.points)}/{len(st.session_state.points)}"
+                )
+                st.success("You did it!")
+        except Exception as e:
+            st.error(e)
             st.stop()
 
 ####################################################################
@@ -331,19 +524,28 @@ def distance_tab():
 def app():
     st.title("Forest Analyzer")
 
-    tab1, tab2, tab3, tab4 = st.tabs(["Intro", "Tables", "Area", "Distance"])
+    st.subheader("Points:")
+    points_bar = st.progress(
+        int(sum(st.session_state.points) / len(st.session_state.points) * 100),
+        text=f"{sum(st.session_state.points)}/{len(st.session_state.points)}"
+    )
+
+    tab1, tab2, tab3, tab4, tab5 = st.tabs(["Intro", "Tables", "Area", "Distance", "Tree species"])
 
     with tab1:
         intro_tab()
 
     with tab2:
-        all_tab()
+        all_tab(points_bar=points_bar)
 
     with tab3:
-        area_tab()
+        area_tab(points_bar=points_bar)
 
     with tab4:
-        distance_tab()
+        distance_tab(points_bar=points_bar)
+    
+    with tab5:
+        tree_species_tab(points_bar=points_bar)
 
 ####################################################################
 
