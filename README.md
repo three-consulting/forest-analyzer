@@ -5,5 +5,5 @@ Natural language forest data analyzer
 ## Setup
 
 1. Run `poetry install`
-2. Run `poetry install`
-3. Run `./nbs/00-spatialite-test.ipynb` notebook
+2. Run `poetry shell`
+3. Run `streamlit run app/main.py`
