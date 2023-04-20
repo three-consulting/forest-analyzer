@@ -289,6 +289,9 @@ def intro_tab():
     #   Tab 2    #
     #            #
     ##############
+@st.cache_data
+def tab2_query(prompt):
+    return st.session_state.index_all.query(prompt)
 
 def all_tab(points_bar):
     st.header("All tables")
@@ -301,7 +304,7 @@ def all_tab(points_bar):
         with st.spinner(text="Getting response..."):
             if st.session_state.table_prompt != st.session_state.latest_table_prompt:
                 try:
-                    st.session_state.all_tables_response = st.session_state.index_all.query(st.session_state.table_prompt)
+                    st.session_state.all_tables_response = tab2_query(st.session_state.table_prompt)
                     st.session_state.latest_table_prompt = st.session_state.table_prompt
                 except Exception as e:
                     st.error(e)
@@ -356,6 +359,10 @@ def all_tab(points_bar):
     #            #
     ##############
 
+@st.cache_data
+def tab3_query(prompt):
+    return st.session_state.index_tab3.query(prompt)
+
 def area_tab(points_bar):
     st.header("Largest Area")
 
@@ -367,7 +374,7 @@ def area_tab(points_bar):
         with st.spinner(text="Getting response..."):
             if st.session_state.area_prompt != st.session_state.latest_area_prompt:
                 try:
-                    st.session_state.area_response = st.session_state.index_tab3.query(st.session_state.area_prompt)
+                    st.session_state.area_response = tab3_query(st.session_state.area_prompt)
                     st.session_state.latest_area_prompt = st.session_state.area_prompt
                 except Exception as e:
                     st.error(e)
@@ -456,6 +463,10 @@ def area_tab(points_bar):
     #            #
     ##############
 
+@st.cache_data
+def tab4_query(prompt):
+    return st.session_state.index_tab4.query(prompt)
+
 def distance_tab(points_bar):
     gold_standard = 18.37
 
@@ -477,7 +488,7 @@ def distance_tab(points_bar):
         with st.spinner(text="Getting response..."):
             if st.session_state.distance_prompt != st.session_state.latest_distance_prompt:
                 try:
-                    st.session_state.distance_response = st.session_state.index_tab4.query(st.session_state.distance_prompt)
+                    st.session_state.distance_response = tab4_query(st.session_state.distance_prompt)
                     st.session_state.latest_distance_prompt = st.session_state.distance_prompt
                 except Exception as e:
                     st.error(e)
@@ -530,6 +541,10 @@ def distance_tab(points_bar):
     #            #
     ##############
 
+@st.cache_data
+def tab5_query(prompt):
+    return st.session_state.index_tab5.query(prompt)
+
 def tree_species_tab(points_bar):
     st.header("Main tree species:")
 
@@ -547,7 +562,7 @@ def tree_species_tab(points_bar):
         with st.spinner(text="Getting response..."):
             if st.session_state.tree_prompt != st.session_state.latest_tree_prompt:
                 try:
-                    st.session_state.tree_response = st.session_state.index_tab5.query(st.session_state.tree_prompt)
+                    st.session_state.tree_response = tab5_query(st.session_state.tree_prompt)
                     st.session_state.latest_tree_prompt = st.session_state.tree_prompt
                 except Exception as e:
                     st.error(e)
@@ -635,6 +650,10 @@ def tree_species_tab(points_bar):
     #            #
     ##############
 
+@st.cache_data
+def tab6_query(prompt):
+    return st.session_state.index_tab6.query(prompt)
+
 def playground_tab():
     st.header("Playground:")
 
@@ -647,7 +666,7 @@ def playground_tab():
         with st.spinner(text="Getting response..."):
             if st.session_state.playground_prompt != st.session_state.latest_playground_prompt:
                 try:
-                    st.session_state.playground_response = st.session_state.index_tab6.query(st.session_state.playground_prompt)
+                    st.session_state.playground_response = tab6_query(st.session_state.playground_prompt)
                     st.session_state.latest_playground_prompt = st.session_state.playground_prompt
                     
                     st.session_state.playground_query = st.session_state.playground_response.extra_info["sql_query"]
