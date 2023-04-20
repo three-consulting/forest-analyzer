@@ -100,8 +100,6 @@ def common_init():
     DATABASE_PORT = os.getenv("DATABASE_PORT")
     DATABASE_HOST = os.getenv("DATABASE_HOST")
 
-    print("DATABASE_PORT: ", DATABASE_PORT)
-
     st.session_state.connection_string = f"postgresql://{DATABASE_USER}:{DATABASE_PASSWORD}@{DATABASE_HOST}:{DATABASE_PORT}/{DATABASE_NAME}"
 
     st.session_state.db = init_db(connection_string=st.session_state.connection_string, include_tables=["stand_4326"])
@@ -119,6 +117,18 @@ def common_init():
     st.session_state.latest_playground_prompt = ""
 
 def tab3_init():
+    st.session_state.area_geojson_res = query_data(
+        query="""
+            SELECT ST_AsGeoJSON(geometry) AS geojson, area 
+            FROM stand_4326 
+            ORDER BY area DESC 
+            LIMIT 1;
+        """,
+        db_name="db",
+    )
+
+    st.session_state.area_geojson_gold_standard = json.dumps(json.loads(st.session_state.area_geojson_res[1]["result"][0][0]))
+
     stand_4326_text_tab3 = (
         "The PostGis plugin is available in the database.\n"
         "The forest polygons can be found from the geometry column.\n"
@@ -221,6 +231,15 @@ def tab4_init():
             st.stop()
 
 def tab5_init():
+    st.session_state.tree_geojson_res = query_data(
+        query="""
+            SELECT id, ST_AsGeoJSON(geometry) FROM stand_4326 WHERE maintreespecies = 2 AND area IS NOT NULL ORDER BY area DESC LIMIT 1;
+        """,
+        db_name="db",
+    )
+
+    st.session_state.tree_geojson_gold_standard = json.dumps(json.loads(st.session_state.tree_geojson_res[1]["result"][0][1]))
+
     stand_4326_text_tab5 = (
         "I have postgreSQL database with PostGis geospatial forest data.\n"
         "The PostGis plugin is available in the database.\n"
@@ -259,6 +278,8 @@ def init():
     tab4_init()
 
     tab5_init()
+
+    tab6_init()
 
 ####################################################################
 
@@ -343,7 +364,12 @@ def all_tab(points_bar):
             st.table(df)
         
         # Task result
-        if type(st.session_state.all_tables_list).__name__ == 'list':
+        all_tables_gold_standard = ['treestratum', 'treestandsummary', 'treestand', 'specification', 'specialfeature', 'datasource', 'restriction', 'assortment', 'stand', 'stand_4326', 'operation']
+        
+        st.session_state.all_tables_list.sort()
+        all_tables_gold_standard.sort()
+
+        if type(st.session_state.all_tables_list).__name__ == 'list' and all_tables_gold_standard == st.session_state.all_tables_list:
             st.session_state.points[0] = 1
             points_bar.progress(
                 int(sum(st.session_state.points)/len(st.session_state.points)*100),
@@ -447,7 +473,7 @@ def area_tab(points_bar):
             )
 
         # Task result
-        if type(st.session_state.area_geojson).__name__ == 'dict':
+        if type(st.session_state.area_geojson).__name__ == 'dict' and json.dumps(st.session_state.area_geojson) == st.session_state.area_geojson_gold_standard:
             st.session_state.points[1] = 1
             points_bar.progress(
                 int(sum(st.session_state.points)/len(st.session_state.points)*100),
@@ -634,7 +660,7 @@ def tree_species_tab(points_bar):
             )
 
         # Task result
-        if True:
+        if type(st.session_state.tree_polygon_geojson).__name__ == 'dict' and json.dumps(st.session_state.tree_polygon_geojson) == st.session_state.tree_geojson_gold_standard:
             st.session_state.points[3] = 1
             points_bar.progress(
                 int(sum(st.session_state.points)/len(st.session_state.points)*100),
@@ -680,25 +706,10 @@ def playground_tab():
         if type(st.session_state.playground_query).__name__ == 'str':
             st.subheader("SQL Query:")
             st.code(st.session_state.playground_query, language="sql", line_numbers=False)
-        
+    
         if st.session_state.playground_result:
             st.subheader("Query result:")
-            if type(st.session_state.playground_result[0]).__name__ == 'str':
-                st.info(st.session_state.playground_result)
-
-            if len(st.session_state.playground_result) > 1:
-                tpl_len = len(st.session_state.playground_result[0])
-                data_list = [[] for _ in range(tpl_len)]
-
-                for tpl in st.session_state.playground_result:
-                    for i in range(tpl_len):
-                        data_list[i].append(tpl[i])
-
-                st.dataframe(pd.DataFrame(data=data_list))
-
-            if type(st.session_state.playground_result[0]).__name__ == 'dict':
-                st.info(st.session_state.playground_result)
-
+            st.write(st.session_state.playground_result)
     
 
 ####################################################################
