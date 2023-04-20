@@ -301,7 +301,7 @@ def intro_tab():
     st.markdown("You might also be pretty well acquinted with SQL. If you are not, SQL is a declarative language which allows user to search (or query) data from databases. Today we are going to introduce you to quering data using only natural language, so no more annoying joins, subqueries, etc!")
     
     st.subheader("Your task")
-    st.markdown("We are running a Supabase instance locally where different geospatial forest data is stored. PLACEHOLDER You are supposed search (or prompt) the largest forest polygon from our database using only natural language. The SQL query which is created from the prompt is displayed on the exercise page.")
+    st.markdown("We are running a Supabase instance locally where different geospatial forest data is stored. We are running a Supabase instance locally where different geospatial forest data from Finland Proper (Varsinais-Suomi) is stored. Your task is to query the database using natural language (english). You are supposed search (or prompt) the largest forest polygon from our database using only natural language. The SQL query which is created from the prompt is displayed on the exercise page.")
 
 ####################################################################
 
@@ -317,8 +317,9 @@ def tab2_query(prompt):
 def all_tab(points_bar):
     st.header("All tables")
     
+    st.markdown("We have a SQL database containing more than one tables. Your task is to try and get the names of all of the tables by giving instructions in natural languge.")
     # Get the names of all tables in database
-    st.text_input("Get the names of all tables in database", key="table_prompt")
+    st.text_input("Prompt", key="table_prompt")
     
     if len(st.session_state.table_prompt) > 0:
         # Process
@@ -393,7 +394,8 @@ def area_tab(points_bar):
     st.header("Largest Area")
 
     # Get the forest polygon with largest area
-    st.text_input("Get the forest polygon with largest area", key="area_prompt")
+    st.markdown("In table `stand_4326` we have general informations about forest plots. The shape of the forest is in polygon form. Your task is to find polygon of forest with largest area.")
+    st.text_input("Prompt", key="area_prompt")
 
     if len(st.session_state.area_prompt) > 0:
         # Process
@@ -507,7 +509,8 @@ def distance_tab(points_bar):
     )
 
     # Query the distance between two forests in km by giving the ids 228942 and 298208 of forests
-    st.text_input("Query the distance between two forests in km by giving the ids 228942 and 298208 of forests", key="distance_prompt")
+    st.markdown("We have to forest plots with `id` values `228942` and `298208`. Your taks is to get the distance between the two forests in kilometers.")
+    st.text_input("Prompt", key="distance_prompt")
     
     if len(st.session_state.distance_prompt) > 0:
         # Process
@@ -542,7 +545,7 @@ def distance_tab(points_bar):
             st.subheader("SQL Query:")
             st.code(st.session_state.distance_sql_query, language="sql", line_numbers=False)
 
-        if type(st.session_state.distance_result).__name__ == 'int':
+        if st.session_state.distance_result:
             st.subheader("Query result:")
             st.metric(
                 label="Query Result:",
@@ -577,11 +580,13 @@ def tree_species_tab(points_bar):
     tree_data = { "maintreespecies": [1, 2, 29], "nimi": ["Mänty", "Kuusi", "Lehtipuu"], "name": ["Pine", "Spruce", "Leafy tree"] }
     tree_df = pd.DataFrame(data=tree_data)
 
-    st.info("Below is a table of maintreespecies found in database.")
+    st.markdown("Below is a table of maintreespecies found in database.")
     st.dataframe(tree_df)
 
+    st.markdown("Your task is to find id and polygon of forest plot with largest area that has main tree species spruce.")
+
     # Get the id and forest polygon of forest with larges area that has main tree species 2. Don't include NULL values.
-    st.text_input("Get the id and forest polygon of forest with largest area that has main tree species spruce", key="tree_prompt")
+    st.text_input("Prompt", key="tree_prompt")
 
     if len(st.session_state.tree_prompt) > 0:
         # Process
