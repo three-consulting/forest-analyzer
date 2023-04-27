@@ -9,6 +9,7 @@ RUN DEBIAN_FRONTEND=noninteractive \
     && apt-get install -y build-essential --no-install-recommends make \
         ca-certificates \
         git \
+        libgl1 \
         libssl-dev \
         zlib1g-dev \
         libbz2-dev \
