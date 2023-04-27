@@ -22,7 +22,8 @@ RUN apt-get update \
         sqlite3 \
         libsqlite3-mod-spatialite \
         gdal-bin \
-        libgdal-dev
+        libgdal-dev && \
+        rm -rf /var/lib/apt/lists/*
 
 RUN groupadd -g 1999 user && useradd --create-home --gid user --uid 1999 user
 ARG HOME="/home/user"
@@ -45,5 +46,7 @@ RUN echo "done 0" \
 COPY . .
 
 RUN poetry install --no-root --no-interaction
+
+USER user
 
 CMD ["poetry", "run", "streamlit", "run", "app/main.py"]
