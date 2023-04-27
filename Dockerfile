@@ -24,8 +24,8 @@ RUN apt-get update \
         gdal-bin \
         libgdal-dev
 
-USER $USER
-ARG HOME="/home/$USER"
+RUN groupadd -g 1999 user && useradd --create-home --gid user --uid 1999 user
+ARG HOME="/home/user"
 ARG PYTHON_VERSION=3.10
 
 ENV PYENV_ROOT="${HOME}/.pyenv"
