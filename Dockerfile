@@ -1,5 +1,7 @@
 FROM python:3.10-bullseye
 
+RUN groupadd -g 1999 user && useradd --create-home --gid user --uid 1999 user
+
 RUN apt-get update \ 
     && apt-get install -y build-essential --no-install-recommends make \
         ca-certificates \
@@ -25,7 +27,6 @@ RUN apt-get update \
         libgdal-dev && \
         rm -rf /var/lib/apt/lists/*
 
-RUN groupadd -g 1999 user && useradd --create-home --gid user --uid 1999 user
 ARG HOME="/home/user"
 ARG PYTHON_VERSION=3.10
 
@@ -43,10 +44,20 @@ RUN echo "done 0" \
     && curl -sSL https://install.python-poetry.org | python3 - \
     && poetry config virtualenvs.in-project true
 
-COPY . .
+WORKDIR /app
+
+COPY pyproject.toml /app
+COPY poetry.lock /app
+
+RUN chown -R user:user /app
+RUN chown -R user:user /home/user/.config/pypoetry
 
 RUN poetry install --no-root --no-interaction
+
+COPY . /app/
 
 USER user
 
 CMD ["poetry", "run", "streamlit", "run", "app/main.py"]
+
+EXPOSE 8501
