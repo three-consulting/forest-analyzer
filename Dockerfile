@@ -58,6 +58,8 @@ COPY . /app/
 
 USER user
 
-CMD ["poetry", "run", "streamlit", "run", "app/main.py"]
-
 EXPOSE 8501
+
+HEALTHCHECK CMD curl --fail http://localhost:8501/_stcore/health
+
+ENTRYPOINT ["poetry", "run", "streamlit", "run", "app/main.py", "--server.port=8501", "--server.address=0.0.0.0"]
