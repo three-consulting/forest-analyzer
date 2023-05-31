@@ -41,7 +41,7 @@ def tab(points_bar):
     st.header("Largest Area")
 
     # Get the forest polygon with largest area
-    st.markdown("In table `stand_4326` we have general informations about forest plots. The shape of the forest is in polygon form. Your task is to find polygon of forest with largest area.")
+    st.markdown("In the `stand_4326` table, we possess various information regarding forest plots. The forest's shape is represented in the form of polygons. Your assignment is to locate the polygon within the forest that has the largest area.")
     st.text_input("Prompt", key="area_prompt")
 
     if len(st.session_state.area_prompt) > 0:

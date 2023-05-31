@@ -47,10 +47,10 @@ def tab(points_bar):
     tree_data = { "maintreespecies": [1, 2, 29], "nimi": ["Mänty", "Kuusi", "Lehtipuu"], "name": ["Pine", "Spruce", "Leafy tree"] }
     tree_df = pd.DataFrame(data=tree_data)
 
-    st.markdown("Below is a table of maintreespecies found in database.")
+    st.markdown("Below is a table of the most common tree species found in database.")
     st.dataframe(tree_df)
 
-    st.markdown("Your task is to find id and polygon of forest plot with largest area that has main tree species spruce.")
+    st.markdown("Your assignment is to discover the ID and polygon of the forest plot with the largest area, which predominantly consists of spruce.")
 
     # Get the id and forest polygon of forest with larges area that has main tree species 2. Don't include NULL values.
     st.text_input("Prompt", key="tree_prompt")

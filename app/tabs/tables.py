@@ -18,7 +18,7 @@ def query(prompt):
 def tab(points_bar):
     st.header("All tables")
     
-    st.markdown("We have a SQL database containing more than one tables. Your task is to try and get the names of all of the tables by giving instructions in natural languge.")
+    st.markdown("Your objective is to retrieve the names of all the tables within our SQL database using instructions written in natural language.")
     st.text_input("Prompt", key="table_prompt")
     
     if len(st.session_state.table_prompt) > 0:

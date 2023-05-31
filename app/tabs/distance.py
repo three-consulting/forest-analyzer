@@ -113,7 +113,7 @@ def tab(points_bar):
     )
 
     # Query the distance between two forests in km by giving the ids 228942 and 298208 of forests
-    st.markdown("We have to forest plots with `id` values `228942` and `298208`. Your taks is to get the distance between the two forests in kilometers.")
+    st.markdown("We possess two forest plots identified by the `ID` values `228942` and `298208`. Your objective is to calculate the distance, in kilometers, between these two forests by using natural language.")
     st.text_input("Prompt", key="distance_prompt")
     
     if len(st.session_state.distance_prompt) > 0:
